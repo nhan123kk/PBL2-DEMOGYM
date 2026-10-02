@@ -1,0 +1,4 @@
+HV001|Đặng Thành Nhân|0912345678|Nam|VIP 1 Năm|Hoạt động
+HV002|Nguyễn Thị Lan|0987654321|Nữ|Basic 3 Tháng|Hoạt động
+HV003|Trần Hữu Khang|0909090909|Nam|Basic 1 Tháng|Hết hạn
+HV004|Lê Quang Đại|0888123456|Nam|VIP 6 Tháng|Hoạt động
