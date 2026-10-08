@@ -1,3 +1,15 @@
-TB002|Dàn tạ đa năng|Thể lực|Bảo trì
-TB003|Xe đạp tập Elip|Cardio|Hoạt động
-TB003|Tạ ||Hoat dong
+TB001|Máy chạy bộ Kingsport|Máy Cardio|8|Đang hoạt động
+TB002|Máy đạp xe Elip|Máy Cardio|5|Đang hoạt động
+TB003|Dàn tạ đa năng Smith|Máy tập Cơ|2|Cần bảo trì
+TB004|Ghế đẩy tạ ngực ngang|Máy tập Cơ|4|Đang hoạt động
+TB005|Máy kéo xô (Lat Pulldown)|Máy tập Cơ|3|Đang hoạt động
+TB006|Giá để tạ Dumbbell 5-30kg|Tạ tự do|2|Đang hoạt động
+TB007|Tạ đòn Olympic 20kg|Tạ tự do|10|Đang hoạt động
+TB008|Bánh tạ Ziva (5kg-20kg)|Tạ tự do|50|Đang hoạt động
+TB009|Thảm tập Yoga định tuyến|Phụ kiện Gym|30|Đang hoạt động
+TB010|Bóng Bosu tập thăng bằng|Phụ kiện Gym|10|Đã hỏng/Thanh lý
+TB011|Dây kháng lực Miniband|Phụ kiện Gym|20|Đang hoạt động
+TB012|Máy leo cầu thang (Stair)|Máy Cardio|2|Cần bảo trì
+TB013|Máy tập đùi trong/ngoài|Máy tập Cơ|2|Đang hoạt động
+TB014|Bao cát đấm bốc 1m2|Khác|3|Đang hoạt động
+TB015|Cân đo inBody 770|Khác|1|Đang hoạt động

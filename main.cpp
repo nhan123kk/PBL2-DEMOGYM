@@ -12,6 +12,7 @@
 #include "SchedulePage.h"
 #include "EquipmentPage.h"
 #include "PaymentPage.h"
+#include "SettingsPage.h"
 
 Font modernFont;
 
@@ -51,6 +52,8 @@ int main() {
     std::vector<GymClass> scheduleList; LoadSchedule(scheduleList);
     std::vector<Equipment> eqList; LoadEquipment(eqList);
     std::vector<PaymentRecord> payList; LoadPayments(payList);
+    AppSettings config; 
+    LoadSettings(config);
 
     auto VeChu = [&](const char* text, float x, float y, float size, Color color) {
         DrawTextEx(modernFont, text, {x, y}, size, 1, color);
@@ -75,8 +78,8 @@ int main() {
 
         // --- MENU BÊN TRÁI ---
         DrawRectangle(0, 0, 240, virtualHeight, bgSidebar);
-        VeChu("PARADISE GYM", 20, 30, 28, neonGreen);
-        VeChu("POWER & FITNESS", 20, 65, 14, textGray);
+        VeChu(config.gymName.c_str(), 20, 30, 24, neonGreen);
+        VeChu(config.ownerName.c_str(), 1055, 38, 20, textWhite);
         
         if (GuiButton({ 10, 110, 220, 50 }, "     DASHBOARD")) currentPage = DASHBOARD;
         if (GuiButton({ 10, 170, 220, 50 }, "     MEMBERS"))   currentPage = MEMBERS;
@@ -101,7 +104,9 @@ int main() {
         } else if (currentPage == EQUIPMENT) {
             DrawEquipmentPage(eqList);
         } else if (currentPage == PAYMENT) {
-            DrawPaymentPage(payList);
+            DrawPaymentPage(payList, memberList);
+        } else if (currentPage == SETTINGS) {
+             DrawSettingsPage(config);
         } else {
             VeChu("Chức năng đang phát triển...", 280, 150, 24, textGray);
         }
