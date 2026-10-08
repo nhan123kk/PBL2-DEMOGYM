@@ -98,7 +98,7 @@ int main() {
         if (currentPage == DASHBOARD) {
             DrawDashboard(memberList, scheduleList, eqList, payList);
         } else if (currentPage == MEMBERS) {
-            DrawMembersPage(memberList);
+        DrawMembersPage(memberList);
         } else if (currentPage == SCHEDULE) {
             DrawSchedulePage(scheduleList);
         } else if (currentPage == EQUIPMENT) {
