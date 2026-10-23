@@ -30,7 +30,16 @@ void LoadEquipment(std::vector<Equipment>& eqList) {
             std::getline(ss, e.name, '|');
             std::getline(ss, e.type, '|');
             std::getline(ss, e.quantity, '|');
+            
+            // Đọc trường cuối cùng
             std::getline(ss, e.status, '|');
+            
+            // --- ĐOẠN FIX LỖI: Cắt bỏ ký tự \r ẩn của Windows ---
+            if (!e.status.empty() && e.status.back() == '\r') {
+                e.status.pop_back();
+            }
+            // ---------------------------------------------------
+
             if (!e.id.empty()) eqList.push_back(e);
         }
         file.close();
@@ -54,8 +63,11 @@ static char inputEqName[64] = "";
 static char inputEqQty[64] = "";
 static bool editEqName = false, editEqQty = false;
 
+// Biến cho Bộ lọc (Filter Dashboard)
+static std::string currentFilter = "Tất cả"; 
+
 // Dropdown Phân loại
-static const char* typeOptions = "Máy Cardio;Máy tập Cơ;Tạ tự do;Phụ kiện Gym;Khác";
+static const char* typeOptions = "Máy Cardio;Máy tập Cơ;Tạ tự do;Phụ kiện & Khác";
 static int activeTypeIndex = 0;
 static bool editTypeDropdown = false;
 
@@ -80,20 +92,70 @@ static void VeChu(const char* text, float x, float y, float size, Color color) {
 }
 
 void DrawEquipmentPage(std::vector<Equipment>& eqList) {
-    VeChu("QUẢN LÝ THIẾT BỊ", 280, 110, 32, textWhite);
+    VeChu("QUẢN LÝ THIẾT BỊ", 280, 60, 32, textWhite);
+
+    // --- THUẬT TOÁN THỐNG KÊ ĐỂ HIỂN THỊ LÊN DASHBOARD ---
+    int countAll = (int)eqList.size();
+    int countCardio = 0, countCo = 0, countTa = 0, countPhuKien = 0;
+    
+    for (const auto& e : eqList) {
+        if (e.type == "Máy Cardio") countCardio++;
+        else if (e.type == "Máy tập Cơ") countCo++;
+        else if (e.type == "Tạ tự do") countTa++;
+        else if (e.type == "Phụ kiện Gym" || e.type == "Khác" || e.type == "Phụ kiện & Khác") countPhuKien++;
+    }
+
+    // --- VẼ 5 Ô VUÔNG PHÂN LOẠI (DASHBOARD WIDGETS) ---
+    struct DashboardCard {
+        Rectangle rect;
+        std::string title;
+        std::string filterName;
+        int count;
+    };
+
+    DashboardCard cards[5] = {
+        {{280, 110, 160, 80}, "TẤT CẢ", "Tất cả", countAll},
+        {{455, 110, 160, 80}, "MÁY CARDIO", "Máy Cardio", countCardio},
+        {{630, 110, 160, 80}, "MÁY TẬP CƠ", "Máy tập Cơ", countCo},
+        {{805, 110, 160, 80}, "TẠ TỰ DO", "Tạ tự do", countTa},
+        {{980, 110, 160, 80}, "PHỤ KIỆN", "Phụ kiện & Khác", countPhuKien}
+    };
+
+    for (int i = 0; i < 5; i++) {
+        // Đã sửa lỗi: Dùng trực tiếp Color{} thay vì ColorToInt()
+        Color cardBg = (currentFilter == cards[i].filterName) ? Color{20, 83, 45, 255} : bgCard;
+        DrawRectangleRounded(cards[i].rect, 0.1f, 10, cardBg);
+        
+        // Viền thẻ
+        if (currentFilter == cards[i].filterName) DrawRectangleRoundedLines(cards[i].rect, 0.1f, 10, neonGreen);
+        else DrawRectangleRoundedLines(cards[i].rect, 0.1f, 10, {51, 65, 85, 255});
+
+        // Bắt sự kiện Click vào ô phân loại
+        if (!showEqModal && CheckCollisionPointRec(GetMousePosition(), cards[i].rect)) {
+            DrawRectangleRoundedLines(cards[i].rect, 0.1f, 10, textWhite);
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                currentFilter = cards[i].filterName;
+                scrollOffset = 0.0f; 
+                selectedEqIndex = -1; 
+            }
+        }
+
+        // Chữ trên thẻ
+        VeChu(cards[i].title.c_str(), cards[i].rect.x + 15, cards[i].rect.y + 15, 16, textGray);
+        VeChu(TextFormat("%d", cards[i].count), cards[i].rect.x + 15, cards[i].rect.y + 40, 28, textWhite);
+    }
 
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
     GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 
-    // --- NÚT THÊM MỚI ---
+    // --- CÁC NÚT CHỨC NĂNG (Đẩy xuống dưới Dashboard) ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
-    if (GuiButton({ 740, 160, 130, 45 }, "THÊM THIẾT BỊ") && !showEqModal) { 
+    if (GuiButton({ 740, 210, 130, 45 }, "THÊM THIẾT BỊ") && !showEqModal) { 
         showEqModal = true;
         isEditMode = false;
         errorMessage = "";
         editTypeDropdown = editStatusDropdown = false;
         
-        // Auto ID
         int maxIdNum = 0;
         for (const auto& e : eqList) {
             std::string numStr = "";
@@ -111,10 +173,10 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
         activeStatusIndex = 0;
     }
 
-    // --- NÚT CHỈNH SỬA ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 124, 45, 18, 255 })); 
-    if (GuiButton({ 880, 160, 130, 45 }, "CHỈNH SỬA") && !showEqModal) { 
-        if (selectedEqIndex != -1 && selectedEqIndex < eqList.size()) { 
+    if (GuiButton({ 880, 210, 130, 45 }, "CHỈNH SỬA") && !showEqModal) { 
+        // Đã sửa lỗi Cảnh báo vàng: Thêm (int) trước eqList.size()
+        if (selectedEqIndex != -1 && selectedEqIndex < (int)eqList.size()) { 
             showEqModal = true;
             isEditMode = true;
             errorMessage = "";
@@ -124,22 +186,26 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
             strncpy(inputEqName, eqList[selectedEqIndex].name.c_str(), 63);
             strncpy(inputEqQty, eqList[selectedEqIndex].quantity.c_str(), 63);
             
-            // Map Dropdown Loại
-            const char* typeArr[] = {"Máy Cardio", "Máy tập Cơ", "Tạ tự do", "Phụ kiện Gym", "Khác"};
+            const char* typeArr[] = {"Máy Cardio", "Máy tập Cơ", "Tạ tự do", "Phụ kiện & Khác"};
             activeTypeIndex = 0;
-            for (int i=0; i<5; i++) if (eqList[selectedEqIndex].type == typeArr[i]) activeTypeIndex = i;
+            for (int i=0; i<4; i++) {
+                if (eqList[selectedEqIndex].type == typeArr[i] || 
+                   (eqList[selectedEqIndex].type == "Phụ kiện Gym" && i==3) || 
+                   (eqList[selectedEqIndex].type == "Khác" && i==3)) {
+                    activeTypeIndex = i;
+                }
+            }
 
-            // Map Dropdown Trạng thái
             const char* stArr[] = {"Đang hoạt động", "Cần bảo trì", "Đã hỏng/Thanh lý"};
             activeStatusIndex = 0;
             for (int i=0; i<3; i++) if (eqList[selectedEqIndex].status == stArr[i]) activeStatusIndex = i;
         }
     }
 
-    // --- NÚT XÓA ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 127, 29, 29, 255 })); 
-    if (GuiButton({ 1020, 160, 130, 45 }, "XÓA") && !showEqModal) { 
-        if (selectedEqIndex != -1 && selectedEqIndex < eqList.size()) {
+    if (GuiButton({ 1020, 210, 130, 45 }, "XÓA") && !showEqModal) { 
+        // Đã sửa lỗi Cảnh báo vàng: Thêm (int) trước eqList.size()
+        if (selectedEqIndex != -1 && selectedEqIndex < (int)eqList.size()) {
             lastDeletedEq = eqList[selectedEqIndex];
             lastDeletedEqIndex = selectedEqIndex;
             canUndoEq = true;
@@ -154,19 +220,30 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar));
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 
-    // --- BẢNG DỮ LIỆU ---
-    DrawRectangleRounded({ 280, 230, 870, 530 }, 0.05f, 10, bgCard);
-    VeChu("MÃ TB", 310, 250, 18, textGray);
-    VeChu("TÊN THIẾT BỊ", 430, 250, 18, textGray);
-    VeChu("PHÂN LOẠI", 670, 250, 18, textGray);
-    VeChu("SL", 840, 250, 18, textGray);
-    VeChu("TRẠNG THÁI", 940, 250, 18, textGray);
-    DrawLine(280, 280, 1150, 280, {81, 99, 122, 255});
+    // --- BẢNG DỮ LIỆU ĐÃ LỌC ---
+    DrawRectangleRounded({ 280, 280, 870, 490 }, 0.05f, 10, bgCard);
+    VeChu("MÃ TB", 310, 300, 18, textGray);
+    VeChu("TÊN THIẾT BỊ", 430, 300, 18, textGray);
+    VeChu("PHÂN LOẠI", 670, 300, 18, textGray);
+    VeChu("SL", 840, 300, 18, textGray);
+    VeChu("TRẠNG THÁI", 940, 300, 18, textGray);
+    DrawLine(280, 330, 1150, 330, {81, 99, 122, 255});
 
-    // --- SCROLLING (CUỘN CHUỘT) ---
-    Rectangle listArea = { 280, 281, 870, 479 }; 
+    // Thuật toán Lọc danh sách (Chỉ lấy các TB khớp với currentFilter)
+    std::vector<int> filteredIndices;
+    for (size_t i = 0; i < eqList.size(); i++) {
+        bool match = false;
+        if (currentFilter == "Tất cả") match = true;
+        else if (eqList[i].type == currentFilter) match = true;
+        else if (currentFilter == "Phụ kiện & Khác" && (eqList[i].type == "Phụ kiện Gym" || eqList[i].type == "Khác")) match = true;
+        
+        if (match) filteredIndices.push_back((int)i);
+    }
+
+    // --- SCROLLING CHO DANH SÁCH ĐÃ LỌC ---
+    Rectangle listArea = { 280, 331, 870, 439 }; 
     float itemHeight = 55.0f;
-    float totalListHeight = eqList.size() * itemHeight;
+    float totalListHeight = filteredIndices.size() * itemHeight;
     
     if (!showEqModal && CheckCollisionPointRec(GetMousePosition(), listArea)) {
         scrollOffset += GetMouseWheelMove() * 30.0f; 
@@ -178,31 +255,32 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
     if (scrollOffset > 0) scrollOffset = 0;
 
     BeginScissorMode(listArea.x, listArea.y, listArea.width, listArea.height);
-    float startY = 300 + scrollOffset;
-    for (size_t i = 0; i < eqList.size(); i++) {
+    float startY = 350 + scrollOffset;
+    
+    for (int idx : filteredIndices) {
         if (startY + 45 >= listArea.y && startY - 10 <= listArea.y + listArea.height) {
             Rectangle rowRect = { 280, startY - 10, 870, 45 };
             
             if (!showEqModal && CheckCollisionPointRec(GetMousePosition(), rowRect)) {
-                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) selectedEqIndex = (int)i; 
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) selectedEqIndex = idx; 
             }
 
-            if (selectedEqIndex == (int)i) {
+            if (selectedEqIndex == idx) {
                 DrawRectangleRec(rowRect, bgCardHover);
                 DrawRectangle(280, startY - 10, 4, 45, neonGreen); 
             }
 
-            VeChu(eqList[i].id.c_str(), 310, startY, 20, textWhite);
-            VeChu(eqList[i].name.c_str(), 430, startY, 20, textWhite);
-            VeChu(eqList[i].type.c_str(), 670, startY, 18, neonBlue);
-            VeChu(eqList[i].quantity.c_str(), 845, startY, 20, textWhite);
+            VeChu(eqList[idx].id.c_str(), 310, startY, 20, textWhite);
+            VeChu(eqList[idx].name.c_str(), 430, startY, 20, textWhite);
+            VeChu(eqList[idx].type.c_str(), 670, startY, 18, neonBlue);
+            VeChu(eqList[idx].quantity.c_str(), 845, startY, 20, textWhite);
 
             Color stColor = textWhite;
-            if (eqList[i].status == "Đang hoạt động") stColor = neonGreen;
-            else if (eqList[i].status == "Cần bảo trì") stColor = neonOrange;
-            else stColor = { 239, 68, 68, 255 }; // Đỏ hỏng hóc
+            if (eqList[idx].status == "Đang hoạt động") stColor = neonGreen;
+            else if (eqList[idx].status == "Cần bảo trì") stColor = neonOrange;
+            else stColor = { 239, 68, 68, 255 }; 
             
-            VeChu(eqList[i].status.c_str(), 940, startY, 18, stColor);
+            VeChu(eqList[idx].status.c_str(), 940, startY, 18, stColor);
 
             DrawLine(280, startY + 40, 1150, startY + 40, {51, 65, 85, 255});
         }
@@ -223,7 +301,7 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
 
         if (GuiButton({ 990, 690, 120, 40 }, "HOAN TAC")) {
-            if (lastDeletedEqIndex >= 0 && lastDeletedEqIndex <= eqList.size()) {
+            if (lastDeletedEqIndex >= 0 && lastDeletedEqIndex <= (int)eqList.size()) {
                 eqList.insert(eqList.begin() + lastDeletedEqIndex, lastDeletedEq);
             } else {
                 eqList.push_back(lastDeletedEq); 
@@ -247,7 +325,6 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
 
         GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
 
-        // Khóa ID
         VeChu("Mã TB:", 450, 230, 18, textWhite);
         DrawRectangleRounded({550, 220, 250, 40}, 0.1f, 10, {51, 65, 85, 255}); 
         VeChu(inputEqId, 560, 230, 20, textGray);
@@ -263,7 +340,6 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
             errorTimer--;
         }
 
-        // VẼ NÚT LƯU & HỦY TRƯỚC (Để Dropdown đè lên)
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
         if (GuiButton({ 480, 560, 130, 45 }, "LƯU LẠI") && !editTypeDropdown && !editStatusDropdown) {
             if (strlen(inputEqName) == 0 || strlen(inputEqQty) == 0) {
@@ -271,7 +347,7 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
                 errorTimer = 180; 
             } 
             else {
-                const char* typeArr[] = {"Máy Cardio", "Máy tập Cơ", "Tạ tự do", "Phụ kiện Gym", "Khác"};
+                const char* typeArr[] = {"Máy Cardio", "Máy tập Cơ", "Tạ tự do", "Phụ kiện & Khác"};
                 const char* stArr[] = {"Đang hoạt động", "Cần bảo trì", "Đã hỏng/Thanh lý"};
                 
                 if (isEditMode) {
@@ -292,19 +368,17 @@ void DrawEquipmentPage(std::vector<Equipment>& eqList) {
             showEqModal = false;
         }
 
-        // VẼ DROPDOWN TRẠNG THÁI (Lớp đè 2)
         VeChu("Tình trạng:", 450, 470, 18, textWhite);
         GuiSetStyle(DROPDOWNBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
         if (GuiDropdownBox({ 550, 460, 250, 40 }, statusOptions, &activeStatusIndex, editStatusDropdown)) {
             editStatusDropdown = !editStatusDropdown; 
-            editTypeDropdown = false; // Đóng cái kia nếu đang mở
+            editTypeDropdown = false; 
         }
 
-        // VẼ DROPDOWN PHÂN LOẠI (Lớp đè 1 - Trên cùng)
         VeChu("Phân loại:", 450, 410, 18, textWhite);
         if (GuiDropdownBox({ 550, 400, 250, 40 }, typeOptions, &activeTypeIndex, editTypeDropdown)) {
             editTypeDropdown = !editTypeDropdown; 
-            editStatusDropdown = false; // Đóng cái kia nếu đang mở
+            editStatusDropdown = false; 
         }
     }
 }
