@@ -19,7 +19,7 @@ void DrawDashboard(const std::vector<Member>& memberList,
 
     int activeEq = 0;
     for(const auto& eq : eqList) {
-        if(eq.status == "Hoạt động") activeEq++;
+        if(eq.status == "Hoạt động" || eq.status == "Đang hoạt động") activeEq++;
     }
     std::string eqStr = std::to_string(eqList.size());
     std::string eqSubText = "Đang hoạt động: " + std::to_string(activeEq);
@@ -76,11 +76,19 @@ void DrawDashboard(const std::vector<Member>& memberList,
     
     for (int i = 0; i < maxClasses; i++) {
         DrawRectangleRounded({ 900, (float)classY, 240, 65 }, 0.2f, 10, bgMain);
-        Color cColor = (classList[i].colorType == 0) ? neonGreen : (classList[i].colorType == 1) ? neonOrange : (classList[i].colorType == 2) ? neonRed : neonBlue;
+        
+        // Cập nhật hệ thống màu sắc dựa trên Text trạng thái
+        Color cColor = textWhite;
+        if (classList[i].status == "Đang diễn ra") cColor = neonGreen;
+        else if (classList[i].status == "Sắp diễn ra") cColor = neonBlue;
+        else if (classList[i].status == "Đã kết thúc") cColor = textGray;
+        else cColor = neonRed;
+
         std::string shortTime = classList[i].time.length() >= 5 ? classList[i].time.substr(0, 5) : classList[i].time;
 
         VeChu(shortTime.c_str(), 915, classY + 20, 20, cColor);
-        VeChu(classList[i].name.c_str(), 985, classY + 10, 18, textWhite);
+        // Sửa name thành className
+        VeChu(classList[i].className.c_str(), 985, classY + 10, 18, textWhite);
         VeChu(classList[i].room.c_str(), 985, classY + 35, 14, textGray);
         classY += 80;
     }

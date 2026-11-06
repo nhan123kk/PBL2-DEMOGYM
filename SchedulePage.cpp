@@ -5,305 +5,307 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <string>
+#include <cctype>
 
 const char* SCHEDULE_FILE = "data/schedule.txt";
 
-// --- HÀM LƯU & ĐỌC FILE ---
-void SaveSchedule(const std::vector<GymClass>& classList) {
+float ParseTime(std::string t, bool isEnd) {
+    size_t dash = t.find('-');
+    std::string part = t;
+    if (dash != std::string::npos) {
+        if (isEnd) part = t.substr(dash + 1);
+        else part = t.substr(0, dash);
+    }
+    
+    int h = 0, m = 0;
+    std::string num = "";
+    bool isMin = false;
+    for (char c : part) {
+        if (isdigit(c)) num += c;
+        else if (c == ':') {
+            if (!num.empty()) h = std::stoi(num);
+            num = "";
+            isMin = true;
+        }
+    }
+    if (!num.empty() && isMin) m = std::stoi(num);
+    else if (!num.empty() && !isMin) h = std::stoi(num);
+
+    if (h < 5) h = 5; 
+    if (h > 23) h = 23;
+    return h + (m / 60.0f);
+}
+
+std::string MapStatus(const std::string& rawStatus) {
+    if (rawStatus == "0") return "Sắp diễn ra";
+    if (rawStatus == "1") return "Đang diễn ra";
+    if (rawStatus == "2") return "Đã kết thúc";
+    if (rawStatus == "3") return "Đã hủy";
+    return rawStatus; 
+}
+
+void SaveSchedule(const std::vector<GymClass>& schList) {
     std::ofstream file(SCHEDULE_FILE);
     if (file.is_open()) {
-        for (const auto& c : classList) {
-            file << c.time << "|" << c.name << "|" << c.trainer << "|" << c.room << "|" << c.colorType << "\n";
+        for (const auto& s : schList) {
+            file << s.time << "|" << s.className << "|" << s.trainer << "|" << s.room << "|" << s.status << "\n";
         }
         file.close();
     }
 }
 
-void LoadSchedule(std::vector<GymClass>& classList) {
+void LoadSchedule(std::vector<GymClass>& schList) {
     std::ifstream file(SCHEDULE_FILE);
     if (file.is_open()) {
-        classList.clear();
+        schList.clear();
         std::string line;
         while (std::getline(file, line)) {
             std::stringstream ss(line);
-            std::string item;
-            GymClass c;
-            std::getline(ss, c.time, '|');
-            std::getline(ss, c.name, '|');
-            std::getline(ss, c.trainer, '|');
-            std::getline(ss, c.room, '|');
-            std::getline(ss, item, '|');
-            c.colorType = std::stoi(item.empty() ? "0" : item);
-            if (!c.time.empty()) classList.push_back(c);
+            GymClass s;
+            std::getline(ss, s.time, '|');
+            std::getline(ss, s.className, '|');
+            std::getline(ss, s.trainer, '|');
+            std::getline(ss, s.room, '|');
+            std::getline(ss, s.status, '|');
+            
+            if (!s.status.empty() && s.status.back() == '\r') s.status.pop_back();
+            s.status = MapStatus(s.status); 
+
+            if (!s.time.empty()) schList.push_back(s);
         }
         file.close();
     } else {
-        classList = {
-            {"06:00 - 07:30", "Yoga Căn Bản", "Nguyễn Mai", "Studio 1", 0},
-            {"15:00 - 16:30", "Boxing", "Lê Quyền", "Sân Võ Thuật", 2}
+        // DỮ LIỆU MẪU ĐÃ ĐƯỢC THAY ĐỔI THEO THỰC TẾ
+        schList = {
+            {"06:00 - 07:30", "Yoga Co Ban", "HLV Nguyen Mai", "Phòng Yoga", "Đã kết thúc"},
+            {"08:00 - 09:30", "HIIT Dot Mo", "HLV Tuan Anh", "Khu Cardio", "Đang diễn ra"},
+            {"17:30 - 19:00", "Zumba Dance", "HLV Minh Anh", "Phòng Group X", "Sắp diễn ra"},
+            {"19:30 - 21:00", "Kickboxing", "HLV Tien Dung", "Khu Kickboxing", "Sắp diễn ra"}
         };
-        SaveSchedule(classList);
+        SaveSchedule(schList);
     }
 }
 
-// --- BIẾN TRẠNG THÁI GIAO DIỆN ---
-static bool showClassModal = false;
+static bool showSchModal = false;
 static bool isEditMode = false;
-static int selectedClassIndex = -1;
+static int selectedSchIndex = -1;
 
-static char inputClassName[64] = "";
-static char inputTrainer[64] = "";
-static bool editClassName = false, editTrainer = false;
+static char inputSchTime[64] = "";
+static char inputSchClass[64] = "";
+static char inputSchTrainer[64] = "";
+static bool editSchTime = false, editSchClass = false, editSchTrainer = false;
 
-// Biến cho Dropdown
-static const char* timeOptions = "06:00 - 07:30;08:00 - 09:30;15:00 - 16:30;17:30 - 19:00;19:30 - 21:00";
-static int activeTimeIndex = 0;
-static bool editTimeDropdown = false;
-
-static const char* roomOptions = "Studio 1;Studio 2;Sân Võ Thuật;Khu Tạ Nặng;Hồ Bơi";
+// ĐỒNG BỘ DROPDOWN TÊN PHÒNG
+static const char* roomOptions = "Phòng Yoga;Phòng Group X;Khu Kickboxing;Khu Cardio;Khu Tạ Tự Do";
 static int activeRoomIndex = 0;
 static bool editRoomDropdown = false;
 
-static const char* colorOptions = "Xanh lá (Yoga/Zen);Cam (Cardio/Đạp xe);Đỏ (Võ thuật/Sức mạnh);Xanh dương (Bơi/Hồi phục)";
-static int activeColorIndex = 0;
-static bool editColorDropdown = false;
+static const char* statusOptions = "Sắp diễn ra;Đang diễn ra;Đã kết thúc;Đã hủy";
+static int activeStatusIndex = 0;
+static bool editStatusDropdown = false;
 
-// Biến cho Cuộn chuột & Báo lỗi
 static float scrollOffset = 0.0f;
 static std::string errorMessage = "";
 static int errorTimer = 0;
-
-// Biến cho Undo
-static GymClass lastDeletedClass;
-static int lastDeletedClassIndex = -1;
-static bool canUndoClass = false;
-static int undoClassTimer = 0;
 
 static void VeChu(const char* text, float x, float y, float size, Color color) {
     DrawTextEx(modernFont, text, {x, y}, size, 1, color);
 }
 
-void DrawSchedulePage(std::vector<GymClass>& classList) {
-    VeChu("LỊCH TẬP & LỚP HỌC", 280, 110, 32, textWhite);
-    
+void DrawSchedulePage(std::vector<GymClass>& schList) {
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
     GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 
-    // --- THANH LỌC THỜI GIAN (DUMMY UI) ---
-    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 51, 65, 85, 255 }));
-    if (GuiButton({ 280, 160, 120, 40 }, "HÔM NAY")) {}
-    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar));
-    if (GuiButton({ 410, 160, 120, 40 }, "TUẦN NÀY")) {}
-    if (GuiButton({ 540, 160, 120, 40 }, "THÁNG NÀY")) {}
-
-    // --- NÚT THÊM LỚP ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
-    if (GuiButton({ 1020, 160, 130, 40 }, "+ THÊM LỚP") && !showClassModal) {
-        showClassModal = true;
+    if (GuiButton({ 740, 80, 130, 40 }, "THÊM LỊCH") && !showSchModal) { 
+        showSchModal = true;
         isEditMode = false;
         errorMessage = "";
-        editTimeDropdown = false;
-        editRoomDropdown = false;
-        editColorDropdown = false;
-
-        memset(inputClassName, 0, sizeof(inputClassName));
-        memset(inputTrainer, 0, sizeof(inputTrainer));
-        activeTimeIndex = 0;
-        activeRoomIndex = 0;
-        activeColorIndex = 0;
+        editRoomDropdown = editStatusDropdown = false;
+        memset(inputSchTime, 0, sizeof(inputSchTime));
+        memset(inputSchClass, 0, sizeof(inputSchClass));
+        memset(inputSchTrainer, 0, sizeof(inputSchTrainer));
+        activeRoomIndex = activeStatusIndex = 0;
     }
 
-    // --- NÚT CHỈNH SỬA ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 124, 45, 18, 255 })); 
-    if (GuiButton({ 880, 160, 130, 40 }, "CHỈNH SỬA") && !showClassModal) {
-        if (selectedClassIndex != -1 && selectedClassIndex < classList.size()) {
-            showClassModal = true;
+    if (GuiButton({ 880, 80, 130, 40 }, "CHỈNH SỬA") && !showSchModal) { 
+        if (selectedSchIndex != -1 && selectedSchIndex < (int)schList.size()) { 
+            showSchModal = true;
             isEditMode = true;
             errorMessage = "";
-            editTimeDropdown = editRoomDropdown = editColorDropdown = false;
-
-            strncpy(inputClassName, classList[selectedClassIndex].name.c_str(), 63);
-            strncpy(inputTrainer, classList[selectedClassIndex].trainer.c_str(), 63);
+            editRoomDropdown = editStatusDropdown = false;
             
-            // Map dữ liệu cũ vào Dropdown
-            const char* timeArr[] = {"06:00 - 07:30", "08:00 - 09:30", "15:00 - 16:30", "17:30 - 19:00", "19:30 - 21:00"};
-            const char* roomArr[] = {"Studio 1", "Studio 2", "Sân Võ Thuật", "Khu Tạ Nặng", "Hồ Bơi"};
+            strncpy(inputSchTime, schList[selectedSchIndex].time.c_str(), 63);
+            strncpy(inputSchClass, schList[selectedSchIndex].className.c_str(), 63);
+            strncpy(inputSchTrainer, schList[selectedSchIndex].trainer.c_str(), 63);
             
-            activeTimeIndex = 0;
-            for (int i=0; i<5; i++) if (classList[selectedClassIndex].time == timeArr[i]) activeTimeIndex = i;
-            
+            // ĐỒNG BỘ ARRAY TÊN PHÒNG KHI SỬA
+            const char* roomArr[] = {"Phòng Yoga", "Phòng Group X", "Khu Kickboxing", "Khu Cardio", "Khu Tạ Tự Do"};
             activeRoomIndex = 0;
-            for (int i=0; i<5; i++) if (classList[selectedClassIndex].room == roomArr[i]) activeRoomIndex = i;
-            
-            activeColorIndex = classList[selectedClassIndex].colorType;
-            if (activeColorIndex > 3 || activeColorIndex < 0) activeColorIndex = 0;
+            for (int i=0; i<5; i++) if (schList[selectedSchIndex].room == roomArr[i]) activeRoomIndex = i;
+
+            const char* stArr[] = {"Sắp diễn ra", "Đang diễn ra", "Đã kết thúc", "Đã hủy"};
+            activeStatusIndex = 0;
+            for (int i=0; i<4; i++) if (schList[selectedSchIndex].status == stArr[i]) activeStatusIndex = i;
         }
     }
 
-    // --- NÚT XÓA LỚP ---
     GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 127, 29, 29, 255 })); 
-    if (GuiButton({ 740, 160, 130, 40 }, "XÓA LỚP") && !showClassModal) {
-        if (selectedClassIndex != -1 && selectedClassIndex < classList.size()) {
-            lastDeletedClass = classList[selectedClassIndex];
-            lastDeletedClassIndex = selectedClassIndex;
-            canUndoClass = true;
-            undoClassTimer = 300; 
-
-            classList.erase(classList.begin() + selectedClassIndex);
-            selectedClassIndex = -1;
-            SaveSchedule(classList); 
+    if (GuiButton({ 1020, 80, 130, 40 }, "XÓA LỚP") && !showSchModal) { 
+        if (selectedSchIndex != -1 && selectedSchIndex < (int)schList.size()) {
+            schList.erase(schList.begin() + selectedSchIndex);
+            selectedSchIndex = -1; 
+            SaveSchedule(schList);
         }
     }
-
-    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar));
-    GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-
-    // --- VẼ DANH SÁCH LỚP HỌC (CARD VIEW VỚI SCISSOR MODE) ---
-    Rectangle listArea = { 280, 230, 870, 530 }; 
-    float itemHeight = 100.0f; // Mỗi thẻ cao 80 + 20 khoảng cách
-    float totalListHeight = classList.size() * itemHeight;
     
-    if (!showClassModal && CheckCollisionPointRec(GetMousePosition(), listArea)) {
+    GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar));
+
+    // ========================================================================
+    // --- KHU VỰC VẼ GOOGLE CALENDAR GRID ---
+    // ========================================================================
+    
+    DrawRectangleRounded({ 280, 135, 870, 635 }, 0.05f, 10, bgCard);
+    
+    // ĐỒNG BỘ TIÊU ĐỀ CỘT LƯỚI
+    const char* cols[] = {"Phòng Yoga", "Phòng Group X", "Khu Kickboxing", "Khu Cardio", "Khu Tạ Tự Do"};
+    float colWidth = (870.0f - 70.0f) / 5.0f; 
+    float startX = 350.0f;
+
+    for (int i = 0; i < 5; i++) {
+        VeChu(cols[i], startX + (i * colWidth) + 20, 150, 18, neonBlue);
+        if (i > 0) DrawLine(startX + (i * colWidth), 135, startX + (i * colWidth), 770, {51, 65, 85, 255}); 
+    }
+    DrawLine(280, 180, 1150, 180, {81, 99, 122, 255}); 
+
+    Rectangle gridArea = { 280, 181, 870, 589 };
+    float hourHeight = 65.0f; 
+    int startHour = 6;  
+    int endHour = 21;   
+    float totalGridHeight = (endHour - startHour + 1) * hourHeight;
+    
+    if (!showSchModal && CheckCollisionPointRec(GetMousePosition(), gridArea)) {
         scrollOffset += GetMouseWheelMove() * 40.0f; 
     }
-    
-    float maxScroll = listArea.height - totalListHeight;
+    float maxScroll = gridArea.height - totalGridHeight;
     if (maxScroll > 0) maxScroll = 0; 
     if (scrollOffset < maxScroll) scrollOffset = maxScroll;
     if (scrollOffset > 0) scrollOffset = 0;
 
-    BeginScissorMode(listArea.x, listArea.y, listArea.width, listArea.height);
-
-    float startY = 230 + scrollOffset;
-    for (size_t i = 0; i < classList.size(); i++) {
-        if (startY + 80 >= listArea.y && startY <= listArea.y + listArea.height) {
-            
-            Color cardColor = (classList[i].colorType == 0) ? neonGreen :
-                              (classList[i].colorType == 1) ? neonOrange :
-                              (classList[i].colorType == 2) ? neonRed : neonBlue;
-
-            Rectangle rowRect = { 280, startY, 870, 80 };
-            
-            if (!showClassModal && CheckCollisionPointRec(GetMousePosition(), rowRect)) {
-                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) selectedClassIndex = (int)i;
-            }
-
-            DrawRectangleRounded(rowRect, 0.1f, 10, (selectedClassIndex == (int)i) ? bgCardHover : bgCard);
-            DrawRectangleRounded({ 280, startY, 10, 80 }, 0.1f, 10, cardColor); 
-            
-            VeChu(classList[i].time.c_str(), 310, startY + 25, 22, cardColor);
-            VeChu(classList[i].name.c_str(), 500, startY + 15, 24, textWhite);
-            
-            std::string subText = "HLV: " + classList[i].trainer + "   |   Phòng: " + classList[i].room;
-            VeChu(subText.c_str(), 500, startY + 45, 16, textGray);
+    BeginScissorMode(gridArea.x, gridArea.y, gridArea.width, gridArea.height);
+    
+    for (int h = startHour; h <= endHour; h++) {
+        float yPos = 195 + (h - startHour) * hourHeight + scrollOffset;
+        if (yPos > 135 && yPos < 800) {
+            VeChu(TextFormat("%02d:00", h), 290, yPos - 10, 16, textGray);
+            DrawLine(350, yPos, 1150, yPos, {51, 65, 85, 150}); 
         }
-        startY += itemHeight; 
+    }
+
+    for (size_t i = 0; i < schList.size(); i++) {
+        int colIdx = 4; 
+        for (int c = 0; c < 5; c++) {
+            if (schList[i].room == cols[c]) { colIdx = c; break; }
+        }
+
+        float sTime = ParseTime(schList[i].time, false);
+        float eTime = ParseTime(schList[i].time, true);
+        
+        float evY = 195 + (sTime - startHour) * hourHeight + scrollOffset;
+        float evHeight = (eTime - sTime) * hourHeight;
+        
+        if (evY + evHeight < gridArea.y || evY > gridArea.y + gridArea.height) continue;
+
+        Rectangle evRect = { startX + (colIdx * colWidth) + 3, evY, colWidth - 6, evHeight - 2 };
+
+        if (!showSchModal && CheckCollisionPointRec(GetMousePosition(), evRect)) {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) selectedSchIndex = (int)i;
+        }
+
+        Color baseColor = { 59, 130, 246, 255 }; 
+        if (schList[i].status == "Đang diễn ra") baseColor = { 34, 197, 94, 255 }; 
+        else if (schList[i].status == "Đã kết thúc") baseColor = { 107, 114, 128, 255 }; 
+        else if (schList[i].status == "Đã hủy") baseColor = { 239, 68, 68, 255 }; 
+
+        Color bgColor = ColorAlpha(baseColor, 0.2f); 
+        if (selectedSchIndex == (int)i) bgColor = ColorAlpha(baseColor, 0.6f); 
+
+        DrawRectangleRounded(evRect, 0.15f, 5, bgColor);
+        DrawRectangle(evRect.x, evRect.y, 4, evRect.height, baseColor); 
+        
+        if (selectedSchIndex == (int)i) {
+            DrawRectangleRoundedLines(evRect, 0.15f, 5, textWhite); 
+        }
+
+        if (evHeight >= 40) {
+            VeChu(schList[i].className.c_str(), evRect.x + 8, evRect.y + 5, 15, textWhite);
+            VeChu(schList[i].time.c_str(), evRect.x + 8, evRect.y + 24, 13, textGray);
+            if (evHeight >= 60) VeChu(schList[i].trainer.c_str(), evRect.x + 8, evRect.y + 40, 13, baseColor);
+        } else {
+            VeChu(schList[i].className.c_str(), evRect.x + 8, evRect.y + 5, 14, textWhite); 
+        }
     }
     EndScissorMode();
 
-    // --- VẼ TOAST THÔNG BÁO HOÀN TÁC ---
-    if (canUndoClass && undoClassTimer > 0 && !showClassModal) {
-        undoClassTimer--;
-        DrawRectangleRounded({ 700, 680, 430, 60 }, 0.2f, 10, { 15, 23, 42, 230 });
-        DrawRectangleRoundedLines({ 700, 680, 430, 60 }, 0.2f, 10, neonRed);
+    // ========================================================================
+    // --- MODAL THÊM / SỬA ---
+    // ========================================================================
+    if (showSchModal) {
+        DrawRectangle(0, 0, 1200, 800, { 0, 0, 0, 150 }); 
+        DrawRectangleRounded({ 400, 100, 450, 620 }, 0.05f, 10, bgMain);
+        DrawRectangleRoundedLines({ 400, 100, 450, 620 }, 0.05f, 10, bgSidebar);
 
-        std::string msg = "Da xoa: " + lastDeletedClass.name;
-        VeChu(msg.c_str(), 720, 700, 18, textWhite);
+        VeChu(isEditMode ? "CHỈNH SỬA LỊCH HỌC" : "THÊM LỊCH HỌC MỚI", 500, 130, 24, neonGreen);
 
-        GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
-        GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
+        VeChu("Khung giờ (VD: 06:00 - 07:30):", 450, 180, 16, textWhite);
+        if (GuiTextBox({ 450, 210, 350, 40 }, inputSchTime, 64, editSchTime)) editSchTime = !editSchTime;
 
-        if (GuiButton({ 990, 690, 120, 40 }, "HOAN TAC")) {
-            if (lastDeletedClassIndex >= 0 && lastDeletedClassIndex <= classList.size()) {
-                classList.insert(classList.begin() + lastDeletedClassIndex, lastDeletedClass);
-            } else {
-                classList.push_back(lastDeletedClass); 
-            }
-            SaveSchedule(classList); 
-            canUndoClass = false; 
-            undoClassTimer = 0;
-            selectedClassIndex = lastDeletedClassIndex; 
-        }
-        GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar)); 
-        if (undoClassTimer <= 0) canUndoClass = false; 
-    }
+        // ĐỒNG BỘ TEXT HƯỚNG DẪN NHẬP
+        VeChu("Tên Lớp (VD: Yoga, Zumba, Kickboxing):", 450, 270, 16, textWhite);
+        if (GuiTextBox({ 450, 300, 350, 40 }, inputSchClass, 64, editSchClass)) editSchClass = !editSchClass;
 
-    // --- CỬA SỔ POPUP THÊM / SỬA LỚP ---
-    if (showClassModal) {
-        DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), { 0, 0, 0, 150 });
-        DrawRectangleRounded({ 400, 120, 450, 580 }, 0.05f, 10, bgMain);
-        DrawRectangleRoundedLines({ 400, 120, 450, 580 }, 0.05f, 10, bgSidebar);
-
-        VeChu(isEditMode ? "CHỈNH SỬA LỚP HỌC" : "THÊM LỚP HỌC MỚI", 500, 150, 24, neonGreen);
-
-        GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
-
-        // Khung nhập Tên lớp và HLV
-        VeChu("Tên Lớp (VD: Yoga, Boxing):", 450, 210, 16, textWhite);
-        if (GuiTextBox({ 450, 230, 350, 40 }, inputClassName, 64, editClassName)) editClassName = !editClassName;
-
-        VeChu("Huấn luyện viên:", 450, 290, 16, textWhite);
-        if (GuiTextBox({ 450, 310, 350, 40 }, inputTrainer, 64, editTrainer)) editTrainer = !editTrainer;
+        VeChu("Huấn Luyện Viên:", 450, 360, 16, textWhite);
+        if (GuiTextBox({ 450, 390, 350, 40 }, inputSchTrainer, 64, editSchTrainer)) editSchTrainer = !editSchTrainer;
 
         if (errorTimer > 0) {
-            VeChu(errorMessage.c_str(), 450, 565, 16, neonRed);
+            VeChu(errorMessage.c_str(), 450, 615, 16, neonRed);
             errorTimer--;
         }
 
-        // VẼ NÚT LƯU LẠI VÀ HỦY (Vẽ trước để Dropdown đè lên)
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt({ 20, 83, 45, 255 })); 
-        if (GuiButton({ 480, 590, 130, 45 }, "LƯU LẠI") && !editTimeDropdown && !editRoomDropdown && !editColorDropdown) {
-            if (strlen(inputClassName) == 0 || strlen(inputTrainer) == 0) {
-                errorMessage = "Vui long nhap Ten lop va HLV!";
+        if (GuiButton({ 480, 640, 130, 45 }, "LƯU LẠI") && !editRoomDropdown && !editStatusDropdown) {
+            if (strlen(inputSchTime) == 0 || strlen(inputSchClass) == 0) {
+                errorMessage = "Vui long nhap du thong tin!";
                 errorTimer = 180; 
             } else {
-                const char* timeArr[] = {"06:00 - 07:30", "08:00 - 09:30", "15:00 - 16:30", "17:30 - 19:00", "19:30 - 21:00"};
-                const char* roomArr[] = {"Studio 1", "Studio 2", "Sân Võ Thuật", "Khu Tạ Nặng", "Hồ Bơi"};
-                
-                std::string selTime = timeArr[activeTimeIndex];
-                std::string selRoom = roomArr[activeRoomIndex];
-
+                // ĐỒNG BỘ ARRAY TÊN PHÒNG KHI LƯU
+                const char* roomArr[] = {"Phòng Yoga", "Phòng Group X", "Khu Kickboxing", "Khu Cardio", "Khu Tạ Tự Do"};
+                const char* stArr[] = {"Sắp diễn ra", "Đang diễn ra", "Đã kết thúc", "Đã hủy"};
                 if (isEditMode) {
-                    classList[selectedClassIndex].time = selTime;
-                    classList[selectedClassIndex].name = inputClassName;
-                    classList[selectedClassIndex].trainer = inputTrainer;
-                    classList[selectedClassIndex].room = selRoom;
-                    classList[selectedClassIndex].colorType = activeColorIndex;
+                    schList[selectedSchIndex].time = inputSchTime;
+                    schList[selectedSchIndex].className = inputSchClass;
+                    schList[selectedSchIndex].trainer = inputSchTrainer;
+                    schList[selectedSchIndex].room = roomArr[activeRoomIndex];
+                    schList[selectedSchIndex].status = stArr[activeStatusIndex];
                 } else {
-                    classList.push_back({selTime, inputClassName, inputTrainer, selRoom, activeColorIndex});
+                    schList.push_back({inputSchTime, inputSchClass, inputSchTrainer, roomArr[activeRoomIndex], stArr[activeStatusIndex]});
                 }
-                SaveSchedule(classList);
-                showClassModal = false; 
+                SaveSchedule(schList); showSchModal = false; 
             }
         }
 
         GuiSetStyle(BUTTON, BASE_COLOR_NORMAL, ColorToInt(bgSidebar)); 
-        if (GuiButton({ 640, 590, 130, 45 }, "HỦY") && !editTimeDropdown && !editRoomDropdown && !editColorDropdown) {
-            showClassModal = false;
-        }
+        if (GuiButton({ 640, 640, 130, 45 }, "HỦY") && !editRoomDropdown && !editStatusDropdown) showSchModal = false;
 
-        // VẼ DROPDOWN THEO THỨ TỰ TỪ DƯỚI LÊN ĐỂ LỚP ĐÈ CHUẨN XÁC
-        
-        // 3. Dropdown Màu sắc (Dưới cùng)
-        VeChu("Phân loại màu thẻ:", 450, 480, 16, textWhite);
+        VeChu("Trạng thái:", 450, 540, 16, textWhite);
         GuiSetStyle(DROPDOWNBOX, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-        if (GuiDropdownBox({ 450, 500, 350, 40 }, colorOptions, &activeColorIndex, editColorDropdown)) {
-            editColorDropdown = !editColorDropdown;
-            editTimeDropdown = editRoomDropdown = false;
-        }
+        if (GuiDropdownBox({ 550, 530, 250, 40 }, statusOptions, &activeStatusIndex, editStatusDropdown)) { editStatusDropdown = !editStatusDropdown; editRoomDropdown = false; }
 
-        // 2. Dropdown Phòng Tập (Giữa)
-        VeChu("Phòng tập:", 635, 380, 16, textWhite);
-        if (GuiDropdownBox({ 635, 400, 165, 40 }, roomOptions, &activeRoomIndex, editRoomDropdown)) {
-            editRoomDropdown = !editRoomDropdown;
-            editTimeDropdown = editColorDropdown = false;
-        }
-
-        // 1. Dropdown Giờ học (Trên cùng)
-        VeChu("Giờ học:", 450, 380, 16, textWhite);
-        if (GuiDropdownBox({ 450, 400, 165, 40 }, timeOptions, &activeTimeIndex, editTimeDropdown)) {
-            editTimeDropdown = !editTimeDropdown;
-            editRoomDropdown = editColorDropdown = false;
-        }
+        VeChu("Phòng Tập:", 450, 470, 16, textWhite);
+        if (GuiDropdownBox({ 550, 460, 250, 40 }, roomOptions, &activeRoomIndex, editRoomDropdown)) { editRoomDropdown = !editRoomDropdown; editStatusDropdown = false; }
     }
+
+    GuiSetStyle(BUTTON, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 }

@@ -52,8 +52,7 @@ int main() {
     std::vector<GymClass> scheduleList; LoadSchedule(scheduleList);
     std::vector<Equipment> eqList; LoadEquipment(eqList);
     std::vector<PaymentRecord> payList; LoadPayments(payList);
-    AppSettings config; 
-    LoadSettings(config);
+   
 
     auto VeChu = [&](const char* text, float x, float y, float size, Color color) {
         DrawTextEx(modernFont, text, {x, y}, size, 1, color);
@@ -78,8 +77,8 @@ int main() {
 
         // --- MENU BÊN TRÁI ---
         DrawRectangle(0, 0, 240, virtualHeight, bgSidebar);
-        VeChu(config.gymName.c_str(), 20, 30, 24, neonGreen);
-        VeChu(config.ownerName.c_str(), 1055, 38, 20, textWhite);
+        VeChu("PARADISE GYM", 20, 30, 24, neonGreen);
+        VeChu("Admin", 1055, 38, 20, textWhite);
         
         if (GuiButton({ 10, 110, 220, 50 }, "     DASHBOARD")) currentPage = DASHBOARD;
         if (GuiButton({ 10, 170, 220, 50 }, "     MEMBERS"))   currentPage = MEMBERS;
@@ -89,7 +88,7 @@ int main() {
         if (GuiButton({ 10, 410, 220, 50 }, "     SETTINGS"))  currentPage = SETTINGS;
 
         // --- HEADER ---
-        VeChu("Welcome back, Admin 👋", 280, 25, 30, textWhite);
+        VeChu("Welcome back", 280, 25, 30, textWhite);
         DrawRectangleRounded({ 1010, 25, 150, 50 }, 0.5f, 10, bgSidebar);
         DrawCircle(1035, 50, 15, neonGreen);
         VeChu("Admin", 1065, 38, 20, textWhite);
@@ -106,7 +105,7 @@ int main() {
         } else if (currentPage == PAYMENT) {
             DrawPaymentPage(payList, memberList);
         } else if (currentPage == SETTINGS) {
-             DrawSettingsPage(config);
+             DrawSettingsPage();
         } else {
             VeChu("Chức năng đang phát triển...", 280, 150, 24, textGray);
         }

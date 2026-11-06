@@ -1,18 +1,17 @@
 #pragma once
-#pragma once
-#include <vector>
 #include <string>
+#include <vector>
 
-// Cấu trúc dữ liệu của 1 buổi tập
+// Trả lại tên GymClass để khớp với Dashboard và Main
 struct GymClass {
     std::string time;
-    std::string name;
+    std::string className;
     std::string trainer;
     std::string room;
-    int colorType; // 0: Xanh lá, 1: Cam, 2: Đỏ, 3: Xanh dương
+    std::string status;
 };
 
-// Khai báo các hàm xử lý
-void LoadSchedule(std::vector<GymClass>& classList);
-void SaveSchedule(const std::vector<GymClass>& classList);
-void DrawSchedulePage(std::vector<GymClass>& classList);
+// Khai báo các hàm để main.cpp có thể gọi được
+void LoadSchedule(std::vector<GymClass>& schList);
+void SaveSchedule(const std::vector<GymClass>& schList);
+void DrawSchedulePage(std::vector<GymClass>& schList);

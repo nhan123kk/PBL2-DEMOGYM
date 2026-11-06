@@ -1,12 +1,7 @@
-06:00 - 07:30|Yoga Chào Mặt Trời|HLV Nguyen Mai|Studio 1|0
-06:00 - 07:30|Đạp xe Cardio HIIT|HLV Tran Binh|Studio 2|1
-08:00 - 09:30|Pilates Căn Bản|HLV Le Thuy|Studio 1|0
-08:00 - 09:30|Lớp Bơi Lội Buổi Sáng|HLV Hoang Hai|Hồ Bơi|3
-15:00 - 16:30|Boxing Đối Kháng|HLV Quang Sang|Sân Võ Thuật|2
-15:00 - 16:30|Zumba Dance|HLV Minh Anh|Studio 1|1
-17:30 - 19:00|Muay Thai Thực Chiến|HLV Tien Dung|Sân Võ Thuật|2
-17:30 - 19:00|Yoga Trị Liệu|HLV Nguyen Mai|Studio 2|0
-17:30 - 19:00|Crossfit Đốt Mỡ|HLV Quoc Bao|Khu Tạ Nặng|2
-19:30 - 21:00|Group X - BodyPump|HLV Minh Anh|Studio 1|1
-19:30 - 21:00|Bơi Hồi Phục Cơ|HLV Hoang Hai|Hồ Bơi|3
-19:30 - 21:00|Kéo dãn cơ (Stretching)|HLV Le Thuy|Studio 2|0
+06:00 - 07:30|Yoga|HLV Nguyen Mai|Phòng Yoga|Đã kết thúc
+08:00 - 09:30|HIIT Đốt Mỡ|HLV Tuan Anh|Khu Cardio|Đã kết thúc
+15:00 - 16:30|Zumba Dance|HLV Minh Anh|Phòng Group X|Đang diễn ra
+17:30 - 19:00|Kickboxing Cơ Bản|HLV Tien Dung|Khu Kickboxing|Sắp diễn ra
+17:30 - 19:00|Yoga Trị Liệu|HLV Le Thuy|Phòng Yoga|Sắp diễn ra
+19:30 - 21:00|Nâng Tạ Nặng|HLV Quoc Bao|Khu Tạ Tự Do|Sắp diễn ra
+19:30 - 21:00|Cardio Sức Bền|HLV Hoang Hai|Khu Cardio|Sắp diễn ra
