@@ -9,30 +9,27 @@ static void VeChu(const char* text, float x, float y, float size, Color color) {
     DrawTextEx(modernFont, text, {x, y}, size, 1, color);
 }
 
-void DrawDashboard(const std::vector<Member>& memberList, 
-                   const std::vector<GymClass>& classList, 
-                   const std::vector<Equipment>& eqList, 
-                   const std::vector<PaymentRecord>& payList) {
+// BỎ CHỮ const ĐỂ KHỚP VỚI KHAI BÁO TRONG main.cpp VÀ Dashboard.h
+void DrawDashboard(GymList<Member>& memberList, 
+                   GymList<GymClass>& classList, 
+                   GymList<Equipment>& eqList, 
+                   GymList<PaymentRecord>& payList) {
     
     // --- 1. THUẬT TOÁN ĐỒNG BỘ DỮ LIỆU ---
     std::string totalMembers = std::to_string(memberList.size());
 
     int activeEq = 0;
     for(const auto& eq : eqList) {
-        if(eq.status == "Hoạt động" || eq.status == "Đang hoạt động") activeEq++;
+        // Dùng Getter thay vì truy cập trực tiếp
+        if(eq.getStatus() == "Hoạt động" || eq.getStatus() == "Đang hoạt động") activeEq++;
     }
     std::string eqStr = std::to_string(eqList.size());
     std::string eqSubText = "Đang hoạt động: " + std::to_string(activeEq);
 
     double totalRevenue = 0;
     for (const auto& p : payList) {
-        if (p.status.find("Đã thu") != std::string::npos) {
-            std::string numStr = "";
-            for (char c : p.amount) {
-                if (isdigit(c)) numStr += c;
-            }
-            if (!numStr.empty()) totalRevenue += std::stod(numStr);
-        }
+        // Giả sử cứ có hóa đơn là tính doanh thu (vì cấu trúc mới không có thuộc tính status cho hóa đơn)
+        totalRevenue += p.getAmount(); 
     }
     
     char revStr[32];
@@ -54,7 +51,7 @@ void DrawDashboard(const std::vector<Member>& memberList,
     DrawRectangleRounded({ 880, 120, 280, 130 }, 0.1f, 10, bgCard);
     VeChu("TỔNG DOANH THU", 900, 140, 18, textGray);
     VeChu(revStr, 900, 165, 48, textWhite);
-    VeChu("Chỉ tính hóa đơn Đã thu", 900, 215, 14, neonGreen);
+    VeChu("Đã tổng hợp toàn hệ thống", 900, 215, 14, neonGreen);
 
     // --- 3. BIỂU ĐỒ ---
     DrawRectangleRounded({ 280, 280, 580, 320 }, 0.05f, 10, bgCard);
@@ -77,19 +74,14 @@ void DrawDashboard(const std::vector<Member>& memberList,
     for (int i = 0; i < maxClasses; i++) {
         DrawRectangleRounded({ 900, (float)classY, 240, 65 }, 0.2f, 10, bgMain);
         
-        // Cập nhật hệ thống màu sắc dựa trên Text trạng thái
-        Color cColor = textWhite;
-        if (classList[i].status == "Đang diễn ra") cColor = neonGreen;
-        else if (classList[i].status == "Sắp diễn ra") cColor = neonBlue;
-        else if (classList[i].status == "Đã kết thúc") cColor = textGray;
-        else cColor = neonRed;
+        Color cColor = neonBlue; // Mặc định màu xanh
 
-        std::string shortTime = classList[i].time.length() >= 5 ? classList[i].time.substr(0, 5) : classList[i].time;
+        std::string fullTime = classList[i].getTimeSlot();
+        std::string shortTime = fullTime.length() >= 5 ? fullTime.substr(0, 5) : fullTime;
 
         VeChu(shortTime.c_str(), 915, classY + 20, 20, cColor);
-        // Sửa name thành className
-        VeChu(classList[i].className.c_str(), 985, classY + 10, 18, textWhite);
-        VeChu(classList[i].room.c_str(), 985, classY + 35, 14, textGray);
+        VeChu(classList[i].getClassName().c_str(), 985, classY + 10, 18, textWhite);
+        VeChu(classList[i].getTrainerName().c_str(), 985, classY + 35, 14, textGray); // Dùng Trainer thay cho Room
         classY += 80;
     }
 

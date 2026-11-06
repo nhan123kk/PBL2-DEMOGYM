@@ -1,12 +1,8 @@
-#pragma once
-#include <vector>
-#include "Member.h"
-#include "SchedulePage.h"
-#include "EquipmentPage.h"
-#include "PaymentPage.h"
+#ifndef DASHBOARD_H
+#define DASHBOARD_H
 
-// Cấu hình hàm DrawDashboard nhận vào 4 danh sách dữ liệu
-void DrawDashboard(const std::vector<Member>& memberList, 
-                   const std::vector<GymClass>& classList, 
-                   const std::vector<Equipment>& eqList, 
-                   const std::vector<PaymentRecord>& payList);
+#include "Member.h"
+
+void DrawDashboard(GymList<Member>& memberList, GymList<GymClass>& classList, GymList<Equipment>& eqList, GymList<PaymentRecord>& payList);
+
+#endif

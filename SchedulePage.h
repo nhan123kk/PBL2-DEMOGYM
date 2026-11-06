@@ -1,17 +1,9 @@
-#pragma once
-#include <string>
-#include <vector>
+#ifndef SCHEDULEPAGE_H
+#define SCHEDULEPAGE_H
 
-// Trả lại tên GymClass để khớp với Dashboard và Main
-struct GymClass {
-    std::string time;
-    std::string className;
-    std::string trainer;
-    std::string room;
-    std::string status;
-};
+#include "Member.h"
 
-// Khai báo các hàm để main.cpp có thể gọi được
-void LoadSchedule(std::vector<GymClass>& schList);
-void SaveSchedule(const std::vector<GymClass>& schList);
-void DrawSchedulePage(std::vector<GymClass>& schList);
+// Chỉ cần khai báo hàm DrawSchedulePage
+void DrawSchedulePage(GymList<GymClass>& schList);
+
+#endif

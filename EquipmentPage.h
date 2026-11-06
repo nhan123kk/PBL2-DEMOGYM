@@ -1,15 +1,9 @@
-#pragma once
-#include <vector>
-#include <string>
+#ifndef EQUIPMENTPAGE_H
+#define EQUIPMENTPAGE_H
 
-struct Equipment {
-    std::string id;
-    std::string name;
-    std::string type;
-    std::string quantity;
-    std::string status;
-};
+#include "Member.h"
 
-void LoadEquipment(std::vector<Equipment>& eqList);
-void SaveEquipment(const std::vector<Equipment>& eqList);
-void DrawEquipmentPage(std::vector<Equipment>& eqList);
+// Chỉ giữ lại khai báo hàm giao diện, xóa bỏ struct Equipment cũ
+void DrawEquipmentPage(GymList<Equipment>& eqList);
+
+#endif
